@@ -1,0 +1,151 @@
+---
+title: "vad_surg_14"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This is the *rmarkdown* document for LVAD and noncardiac surgery for 2014. *SAS* used to identify lvad supported patients during the year.
+The dataframe contains only lvad supported patients now. We will need to merge hospital and other files with this to obtain the large dataframe for analysis.
+
+```{r get the libraries into the document}
+
+library(tidyverse);library(survey);library(srvyr);library(mosaic);
+library(MASS);library(haven)
+
+```
+
+Get the *SAS* 2014 core file for analysis and tidydata.
+
+```{r read SAS file}
+
+c2014 <- read_sas("D:/LVAD_noncardiac_surgery/lvad14_c.sas7bdat")
+
+# convert var names to lowercase as is usual
+
+names(c2014) <- tolower(names(c2014))
+
+glimpse(c2014)
+```
+
+Use the *prccs* columns to identify patients who are having surgical procedures during this admission and which procedures they have. From the *prccs1* and *prccs2* codes seperate surgical procedures into major groups according to body type and type of surgery.
+
+```{r count for pr1 & pr2}
+# prccs 1 procedures
+
+pr1_list <- c2014  %>% count(pr1) %>% tbl_df()
+
+pr1_list <- pr1_list %>% arrange(desc(n))
+
+
+# prccs2 procedures
+pr2_list <- c2014 %>% count(pr2)
+
+
+pr2_list <- pr2_list %>% arrange(desc(n))
+
+
+pr1_list
+
+pr2_list
+```
+
+
+
+
+99.04 = transfusion of RBC
+45.13 = endoscopy of small intestine
+38.97 = CVP catheter placement with US guidance
+45.23 = colonoscopy
+88.72 = ECHO
+37.64 = removal of LVAD/likely for transplant
+38.93 = venous catheterization
+89.64 = PA wedge monitoring
+93.83 = PT/OT consult
+39.95 = hemodialysis
+37.21 = RHC procedure
+96.04 = endotracheal tube insertion
+38.91 = arterial catheterization
+
+```{r diagoses for admission}
+
+dx1 <- c2014 %>% count(dx1)
+
+dx1 %>% arrange(desc(n))
+
+```
+Primary diagnosis:
+
+428.23 = acute on chronic heart failure
+996.61 = infection due to implant / device implant
+v45.89 = prior surgery
+427.1 = paroxysmal SVT / fast AF
+578.1 = blood stool / PR bleeding
+578.9 = GI bleed
+537.83 = Angiodysplasia of the stomach/duodenum
+790.92 = abnormal coagulation profile
+996.72 = embolism due to cardiac device/graft
+569.85 = Angiodysplasia of the intestine
+584.9 = kidney failure
+428.0 = congestive heart failure
+428.22 = chronic CHF
+428.43 = acute on chronic CHF
+425.4 = primary cardiomyopathy
+414.8 = IHD
+996.09 = mechanical device malfunction/LVAD malfunction
+285.1 = Anemia
+784.7 = Epistaxis
+285.9 = Anemia (unspecified)
+431 = intracerebral hemorrage
+434.11 = cerebral embolism with infarct
+038.9 = unspecified septicemia
+434.91 = cerebral A occlusion with cerebral infarct
+780.2 = syncope and collapse
+790.7 = bacteremia
+276.51 = dehydration
+486 = pneumonia
+862.6 = cellulitis/abcess of skin likely drive-line infection
+404.91 = chronic kidney disease
+435.9 = cerebral ischemia
+
+```{r infection}
+inf <- as.character(c('0380',
+'0381', '03810', '03811', '03812', '03819',          
+'03842',                  
+'03840', '03841', '03843', '03844', '03849',          
+'0031', '0202', '0223', '0362', '0382', '0383', '0545',      
+'0388',' 0389', '449', '77181', '7907', '99591', '99592',      
+'0200', '0208', '0209', '0218', '0219', '0228', '0229', '0230', '0231', '0232',
+'0233', '0238', '0239', '024', '025', '0260', '0269', '0270', '0271', '0272',
+'0278', '0279', '0300', '0301', '0302', '0303', '0308', '0309', '0312', '0318',
+'0319', '03289', '0329', '0330', '0331', '0338', '0339', '0341', '0363', '03681',
+'03689', '0369', '037', '0392', '0393', '0394', '0398', '0399', '0400', '0401',
+'0402', '0403', '04042', '04081', '04082', '04089', '0410', '04100', '04101', '04102',
+'04103', '04104', '04105', '04109', '0411', '04110', '04111', '04112', '04119', '0412',
+'0413', '0414', '04141', '04142', '04143', '04149', '0415', '0416', '0417', '0418',
+'04181', '04182', '04183', '04184', '04185', '04186', '04189', '0419', '390', '3929',
+'7953', '79531', '79539', 'V090', 'V091', 'V092', 'V093', 'V094', 'V0950', 'V0951',
+'V096', 'V0970', 'V0971', 'V0980', 'V0981', 'V0990', 'V0991', 'V1204'))   
+
+```
+
+
+
+```{r primary diagnosis infection}
+
+c2014$infection <- with(c2014,ifelse ((dx1 %in% inf | dx2 %in% inf), 1,0))
+
+c2014 %>% count(infection) # primary diagnosis
+```
+
+
+```{r arrythmias}
+arry <- as.character(c('4270',  '4271','42731','42741', '42742', '4275','4272', '42789', '4279', '7850', '7851')) 
+
+c2014$arry <- with(c2014, ifelse((dx1 %in% arry | dx2 %in% arry), 1, 0)) 
+
+c2014 %>% count(arry)
+```
+
